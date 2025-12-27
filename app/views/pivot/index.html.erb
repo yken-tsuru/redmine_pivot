@@ -1,0 +1,38 @@
+<% content_for :header_tags do %>
+  <%= stylesheet_link_tag 'pivot', :plugin => 'redmine_pivot' %>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pivottable/2.23.0/pivot.min.css">
+  <!-- Ensure jQuery and jQuery UI are available. Redmine usually bundles jQuery. -->
+  <!-- We might need to load jQuery UI if Redmine doesn't default to it for all pages, specifically for drag and drop -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pivottable/2.23.0/pivot.min.js"></script>
+  <%= javascript_include_tag 'pivot', :plugin => 'redmine_pivot' %>
+<% end %>
+
+<% content_for :sidebar do %>
+  <h3><%= l(:label_query_plural) %></h3>
+  <ul class="queries">
+    <li>
+      <%= link_to l(:label_issue_plural), { :controller => 'pivot', :action => 'index', :project_id => @project }, :class => (@query.new_record? ? 'selected' : nil) %>
+    </li>
+    <% @sidebar_queries.each do |query| %>
+      <li>
+        <%= link_to query.name, { :controller => 'pivot', :action => 'index', :project_id => @project, :query_id => query.id }, :class => (@query.id == query.id ? 'selected' : nil) %>
+      </li>
+    <% end %>
+  </ul>
+<% end %>
+
+<h2>Pivot Table</h2>
+
+<div id="pivot-table-output"></div>
+
+<script>
+  // Expose data to global scope
+  window.redminePivotData = <%= raw @issues_json.to_json %>;
+  
+  // Default configuration with localized field names
+  window.redminePivotOptions = {
+    rows: ["<%= l(:field_tracker) %>", "<%= l(:field_status) %>"],
+    cols: ["<%= l(:field_priority) %>"]
+  };
+</script>

@@ -1,0 +1,14 @@
+#pivot-table-output {
+  margin-top: 20px;
+  overflow-x: auto;
+}
+
+.pvtAxisContainer, .pvtVals {
+  background: #fcfcfc;
+  border: 1px solid #ddd;
+  padding: 5px;
+}
+
+.pvtRendererArea {
+  padding: 5px;
+}
