@@ -2,3 +2,72 @@ en:
   label_pivot: Pivot
   permission_view_pivot: View Pivot Table
   project_module_pivot: Pivot Table
+  label_settings: Settings
+  button_configure: Configure Fields
+  button_check_all: Check All
+  button_uncheck_all: Uncheck All
+  button_apply: Apply
+  button_fullscreen: Full Screen
+  button_exit_fullscreen: Exit Full Screen
+  button_save: Save
+  button_text_grouping: Text Grouping
+  button_add: Add
+  button_close: Close
+  label_text_grouping_settings: Text Grouping Settings
+  label_target_field: Target Field
+  label_regex: Regex
+  label_format: Format
+  label_group_name: Group Name (New Field Name)
+  label_regex_example: "(e.g., ^(\\d+) )"
+  label_format_example: "(e.g., {0}* )"
+  placeholder_group_name: "e.g., Subject Group"
+  # JS Strings
+  js:
+    render_error: "An error occurred while rendering the pivot table."
+    compute_error: "An error occurred while computing the pivot table results."
+    ui_render_error: "An error occurred while rendering the results."
+    select_all: "Select All"
+    select_none: "Select None"
+    too_many: "(too many to list)"
+    filter_results: "Filter values"
+    apply: "Apply"
+    cancel: "Cancel"
+    totals: "Totals"
+    vs: "vs"
+    by: "per"
+    prompt_save_settings: "Please enter a name for this setting:"
+    alert_no_boolean: "No boolean fields available for aggregation."
+    confirm_multi_bool: "Switch to multi-item aggregation mode?\\n(Number of rows will multiply by number of items)"
+    button_multi_bool: "Multi-item Aggregation"
+    label_no_rules: "No rules configured."
+    error_fill_all: "Please fill in all fields."
+    error_invalid_regex: "Invalid Regular Expression: "
+    label_item_name: "Item Name"
+    label_value: "Value"
+    # Suffixes for date derivatives
+    label_year: " (Year)"
+    label_month: " (Month)"
+    label_day: " (Day)"
+    label_year_month: " (Year-Month)"
+    # Aggregators
+    aggregator_count: "Count"
+    aggregator_count_unique_values: "Count Unique Values"
+    aggregator_list_unique_values: "List Unique Values"
+    aggregator_sum: "Sum"
+    aggregator_integer_sum: "Integer Sum"
+    aggregator_average: "Average"
+    aggregator_median: "Median"
+    aggregator_variance: "Variance"
+    aggregator_sample_variance: "Sample Variance" 
+    aggregator_standard_deviation: "Standard Deviation"
+    aggregator_sample_standard_deviation: "Sample Standard Deviation"
+    aggregator_minimum: "Minimum"
+    aggregator_maximum: "Maximum"
+    aggregator_first: "First"
+    aggregator_last: "Last"
+    aggregator_sum_as_fraction_of_total: "Sum as Fraction of Total"
+    aggregator_sum_as_fraction_of_rows: "Sum as Fraction of Rows"
+    aggregator_sum_as_fraction_of_columns: "Sum as Fraction of Columns"
+    aggregator_count_as_fraction_of_total: "Count as Fraction of Total"
+    aggregator_count_as_fraction_of_rows: "Count as Fraction of Rows"
+    aggregator_count_as_fraction_of_columns: "Count as Fraction of Columns"

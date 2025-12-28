@@ -3,12 +3,66 @@
   overflow-x: auto;
 }
 
-.pvtAxisContainer, .pvtVals {
+.pvtAxisContainer,
+.pvtVals {
   background: #fcfcfc;
   border: 1px solid #ddd;
   padding: 5px;
 }
 
+/* Limit height of unused fields area to improve usability with many fields */
+td.pvtAxisContainer.pvtUnused {
+  display: block;
+  max-height: 350px;
+  overflow-y: auto;
+  width: auto;
+  white-space: normal !important;
+  /* Force wrapping */
+}
+
+/* Style list items to look like tags and ensure wrapping */
+td.pvtAxisContainer.pvtUnused li {
+  float: left !important;
+  margin-right: 5px !important;
+  margin-bottom: 5px !important;
+  clear: none !important;
+}
+
 .pvtRendererArea {
   padding: 5px;
+}
+
+/* Full Screen Mode */
+.full-screen-pivot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background: white;
+  padding: 20px;
+  overflow: auto;
+  box-sizing: border-box;
+}
+
+/* Adjustments when in full screen */
+
+.full-screen-pivot #pivot-controls {
+  /* Ensure controls are visible in full screen */
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #ddd;
+}
+
+/* Increase font size for the table content */
+.pvtTable,
+.pvtTable td,
+.pvtTable th {
+  font-size: 1.1em !important;
+}
+
+td.pvtAxisContainer,
+td.pvtVals {
+  font-size: 1.0em;
+  /* Ensure controls don't get too huge if they inherit */
 }

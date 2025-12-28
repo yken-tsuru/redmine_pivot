@@ -2,3 +2,72 @@ ja:
   label_pivot: ピボット
   permission_view_pivot: ピボットテーブルの閲覧
   project_module_pivot: ピボットテーブル
+  label_settings: 設定
+  button_configure: 表示項目の設定
+  button_check_all: 全選択
+  button_uncheck_all: 全解除
+  button_apply: 適用
+  button_fullscreen: 全画面表示
+  button_exit_fullscreen: 全画面解除
+  button_save: 保存
+  button_text_grouping: テキストグループ化
+  button_add: 追加
+  button_close: 閉じる
+  label_text_grouping_settings: テキストグループ化設定
+  label_target_field: 対象フィールド
+  label_regex: 正規表現
+  label_format: フォーマット
+  label_group_name: グループ名 (新しい項目名)
+  label_regex_example: "(例: ^(\\d+) )"
+  label_format_example: "(例: {0}* )"
+  placeholder_group_name: "題名グループ"
+  # JS Strings
+  js:
+    render_error: "描画中にエラーが発生しました。"
+    compute_error: "集計中にエラーが発生しました。"
+    ui_render_error: "表示中にエラーが発生しました。"
+    select_all: "全選択"
+    select_none: "選択解除"
+    too_many: "(多すぎるため表示できません)"
+    filter_results: "項目の絞り込み"
+    apply: "適用"
+    cancel: "キャンセル"
+    totals: "合計"
+    vs: "vs"
+    by: "per"
+    prompt_save_settings: "設定名を入力して保存してください:"
+    alert_no_boolean: "集計可能なブール値項目がありません。"
+    confirm_multi_bool: "複数項目の集計モードに切り替えますか？\\n（行数が項目数分だけ倍増します）"
+    button_multi_bool: "複数項目の集計"
+    label_no_rules: "ルールは設定されていません。"
+    error_fill_all: "すべての項目を入力してください。"
+    error_invalid_regex: "正規表現が無効です: "
+    label_item_name: "項目名"
+    label_value: "値"
+    # Suffixes for date derivatives
+    label_year: " (年)"
+    label_month: " (月)"
+    label_day: " (日)"
+    label_year_month: " (年月)"
+    # Aggregators
+    aggregator_count: "件数"
+    aggregator_count_unique_values: "ユニークな値の数"
+    aggregator_list_unique_values: "リスト (ユニーク)"
+    aggregator_sum: "合計"
+    aggregator_integer_sum: "整数合計"
+    aggregator_average: "平均"
+    aggregator_median: "中央値"
+    aggregator_variance: "分散"
+    aggregator_sample_variance: "標本分散"
+    aggregator_standard_deviation: "標準偏差"
+    aggregator_sample_standard_deviation: "標本標準偏差"
+    aggregator_minimum: "最小"
+    aggregator_maximum: "最大"
+    aggregator_first: "1番目の値"
+    aggregator_last: "最後の値"
+    aggregator_sum_as_fraction_of_total: "合計に対する割合"
+    aggregator_sum_as_fraction_of_rows: "行の合計に対する割合"
+    aggregator_sum_as_fraction_of_columns: "列の合計に対する割合"
+    aggregator_count_as_fraction_of_total: "件数に対する割合"
+    aggregator_count_as_fraction_of_rows: "行の件数に対する割合"
+    aggregator_count_as_fraction_of_columns: "列の件数に対する割合"
