@@ -1,5 +1,6 @@
 en:
   label_pivot: Pivot
+  warning_too_many_issues: "Too many issues to display. Showing the first %{count} issues."
   permission_view_pivot: View Pivot Table
   project_module_pivot: Pivot Table
   label_settings: Settings

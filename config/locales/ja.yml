@@ -1,5 +1,6 @@
 ja:
   label_pivot: ピボット
+  warning_too_many_issues: "表示対象のチケットが多すぎます。先頭の %{count} 件のみを表示しています。"
   permission_view_pivot: ピボットテーブルの閲覧
   project_module_pivot: ピボットテーブル
   label_settings: 設定

@@ -11,9 +11,12 @@ class PivotController < ApplicationController
     @sidebar_queries = IssueQuery.visible.where(project: @project)
 
     if @query.valid?
-      @issues = @query.issues(:include => [:status, :tracker, :priority, :assigned_to, :category, :fixed_version, :custom_values => :custom_field], :limit => nil)
+      @issues = @query.issues(:include => [:status, :tracker, :priority, :assigned_to, :category, :fixed_version, :custom_values => :custom_field], :limit => 5000)
+      if @query.issue_count > 5000
+        flash.now[:warning] = l(:warning_too_many_issues, :count => 5000)
+      end
     else
-      @issues = @project.issues.visible.includes(:status, :tracker, :priority, :assigned_to, :category, :fixed_version, :custom_values => :custom_field).all
+      @issues = @project.issues.visible.includes(:status, :tracker, :priority, :assigned_to, :category, :fixed_version, :custom_values => :custom_field).limit(5000)
     end
 
     @issues_json = @issues.map do |issue|
