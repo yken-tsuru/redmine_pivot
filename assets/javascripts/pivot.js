@@ -1,32 +1,39 @@
-$(document).ready(function () {
-    if (window.redminePivotData) {
-        var derivers = $.pivotUtilities.derivers;
-        var renderers = $.pivotUtilities.renderers;
+var RedminePivot = (function ($) {
+    "use strict";
+
+    var config = {};
+    var customTextDerivers = [];
+    var derivedAttributes = {};
+    var aggregators = {};
+    var localizedRenderers = {};
+    var dateSuffixes = {};
+    var localeAgg = {};
+    var localeRend = {};
+
+    function init() {
+        if (!window.redminePivotData) return;
+
+        // Load locale strings
+        localeAgg = window.redminePivotLocaleStrings.aggregators;
+        localeRend = window.redminePivotLocaleStrings.renderers;
+
+        initAggregators();
+        initRenderers();
+        initDateDerivers();
+
+        setupConfig();
+        setupUI();
+
+        // Initial Render
+        render();
+    }
+
+    function initAggregators() {
         var tpl = $.pivotUtilities.aggregatorTemplates;
+        var fmt = $.pivotUtilities.numberFormat({ thousandsSep: ",", decimalSep: "." });
+        var fmtInt = $.pivotUtilities.numberFormat({ digitsAfterDecimal: 0, thousandsSep: ",", decimalSep: "." });
+        var fmtPct = $.pivotUtilities.numberFormat({ digitsAfterDecimal: 1, scaler: 100, suffix: "%", thousandsSep: ",", decimalSep: "." });
 
-        // Number formatting
-        var fmt = $.pivotUtilities.numberFormat({
-            thousandsSep: ",",
-            decimalSep: "."
-        });
-        var fmtInt = $.pivotUtilities.numberFormat({
-            digitsAfterDecimal: 0,
-            thousandsSep: ",",
-            decimalSep: "."
-        });
-        var fmtPct = $.pivotUtilities.numberFormat({
-            digitsAfterDecimal: 1,
-            scaler: 100,
-            suffix: "%",
-            thousandsSep: ",",
-            decimalSep: "."
-        });
-
-        // Localized Aggregators
-        // We use the keys provided by the server in window.redminePivotLocaleStrings.aggregators
-        // to map to the implementation.
-        var localeAgg = window.redminePivotLocaleStrings.aggregators;
-        var aggregators = {};
         aggregators[localeAgg.count] = tpl.count(fmtInt);
         aggregators[localeAgg.countUniqueValues] = tpl.countUnique(fmtInt);
         aggregators[localeAgg.listUniqueValues] = tpl.listUnique(", ");
@@ -48,8 +55,9 @@ $(document).ready(function () {
         aggregators[localeAgg.countAsFractionOfTotal] = tpl.fractionOf(tpl.count(), "total", fmtPct);
         aggregators[localeAgg.countAsFractionOfRows] = tpl.fractionOf(tpl.count(), "row", fmtPct);
         aggregators[localeAgg.countAsFractionOfColumns] = tpl.fractionOf(tpl.count(), "col", fmtPct);
+    }
 
-        // Combine all available renderers
+    function initRenderers() {
         var renderersObj = $.extend(
             {},
             $.pivotUtilities.renderers,
@@ -59,11 +67,6 @@ $(document).ready(function () {
             $.pivotUtilities.export_renderers || {}
         );
 
-        // Map to Localized names
-        var localeRend = window.redminePivotLocaleStrings.renderers;
-        var localizedRenderers = {};
-
-        // Helper to map if exists
         var mapRenderer = function (localizedName, originalName) {
             if (renderersObj[originalName]) {
                 localizedRenderers[localizedName] = renderersObj[originalName];
@@ -81,96 +84,123 @@ $(document).ready(function () {
         mapRenderer(localeRend.areaChart, "Area Chart");
         mapRenderer(localeRend.scatterChart, "Scatter Chart");
         mapRenderer(localeRend.tsvExport, "TSV Export");
+    }
 
-        // Detect date fields and add derived attributes
-        var derivedAttributes = {};
-        var dateSuffixes = {
+    function initDateDerivers() {
+        dateSuffixes = {
             year: window.redminePivotLocaleStrings.labelYear,
             month: window.redminePivotLocaleStrings.labelMonth,
             day: window.redminePivotLocaleStrings.labelDay,
             yearMonth: window.redminePivotLocaleStrings.labelYearMonth
         };
 
-        // 1. Use server-provided metadata (Reliable & Fast)
         if (window.redminePivotDateFields) {
             window.redminePivotDateFields.forEach(function (key) {
-                derivedAttributes[key + dateSuffixes.year] = $.pivotUtilities.derivers.dateFormat(key, "%y");
-                derivedAttributes[key + dateSuffixes.month] = $.pivotUtilities.derivers.dateFormat(key, "%m");
-                derivedAttributes[key + dateSuffixes.day] = $.pivotUtilities.derivers.dateFormat(key, "%d");
-                derivedAttributes[key + dateSuffixes.yearMonth] = $.pivotUtilities.derivers.dateFormat(key, "%y-%m");
+                addDateDeriver(key);
             });
         }
-        // 2. Fallback: Scan data if metadata is missing (e.g. older version cached)
-        else if (window.redminePivotData.length > 0) {
-            var datePattern = /^\d{4}-\d{2}-\d{2}$/;
-            var allKeys = {};
-            // Scan up to 50 records
-            var limit = Math.min(window.redminePivotData.length, 50);
-            for (var i = 0; i < limit; i++) {
-                var record = window.redminePivotData[i];
-                for (var key in record) {
-                    if (record[key] && datePattern.test(record[key])) {
-                        allKeys[key] = true;
-                    }
-                }
-            }
-            for (var key in allKeys) {
-                derivedAttributes[key + dateSuffixes.year] = $.pivotUtilities.derivers.dateFormat(key, "%y");
-                derivedAttributes[key + dateSuffixes.month] = $.pivotUtilities.derivers.dateFormat(key, "%m");
-                derivedAttributes[key + dateSuffixes.day] = $.pivotUtilities.derivers.dateFormat(key, "%d");
-                derivedAttributes[key + dateSuffixes.yearMonth] = $.pivotUtilities.derivers.dateFormat(key, "%y-%m");
-            }
-        }
+    }
 
-        // Prepare config
-        var config = {
+    function addDateDeriver(key) {
+        derivedAttributes[key + dateSuffixes.year] = $.pivotUtilities.derivers.dateFormat(key, "%y");
+        derivedAttributes[key + dateSuffixes.month] = $.pivotUtilities.derivers.dateFormat(key, "%m");
+        derivedAttributes[key + dateSuffixes.day] = $.pivotUtilities.derivers.dateFormat(key, "%d");
+        derivedAttributes[key + dateSuffixes.yearMonth] = $.pivotUtilities.derivers.dateFormat(key, "%y-%m");
+    }
+
+    function setupConfig() {
+        config = {
             derivedAttributes: derivedAttributes,
             rows: ["Tracker", "Status"],
             cols: ["Priority"],
-            // vals: ["Estimated Hours"], 
-
             aggregators: aggregators,
             renderers: localizedRenderers,
-
-            // Defaults (Localized)
             aggregatorName: localeAgg.count,
             rendererName: localeRend.table,
-
             localeStrings: window.redminePivotLocaleStrings,
-
-            // Force unused attributes to be horizontal (prevents layout shift)
             unusedAttrsVertical: false
         };
 
-        // Override defaults with server-side options if available
+        // Override defaults with server-side options
         if (window.redminePivotOptions) {
             if (window.redminePivotOptions.rows) config.rows = window.redminePivotOptions.rows;
             if (window.redminePivotOptions.cols) config.cols = window.redminePivotOptions.cols;
         }
 
-        // Initialize Field Selection Checkboxes
-        var allKeys = [];
-        if (window.redminePivotData.length > 0) {
-            var keySet = {};
-            window.redminePivotData.forEach(function (record) {
-                Object.keys(record).forEach(function (k) {
-                    keySet[k] = true;
-                });
-            });
-            allKeys = Object.keys(keySet).sort();
+        // Apply Saved Config
+        if (window.redminePivotQueryConfig) {
+            applySavedConfig(window.redminePivotQueryConfig);
         }
 
+        // onRefresh hook for persistence
+        config.onRefresh = function (cfg) {
+            var currentPivotConfig = getSerializableConfig(cfg);
+            // We can attach this to the global object or a hidden field right away if we wanted, 
+            // but the original code did it on Save.
+            // We'll expose it safely if needed, or better, just re-read from the pivot instance when saving.
+            // But pivot instance doesn't expose config easily after render.
+            // So let's store it in a module variable.
+            RedminePivot.currentConfig = currentPivotConfig;
+        };
+    }
+
+    function getSerializableConfig(cfg) {
+        var serializable = {};
+        var keys = ["rows", "cols", "vals", "aggregatorName", "rendererName", "hiddenAttributes", "hiddenFromAggregators"];
+        keys.forEach(function (k) {
+            if (cfg[k] !== undefined) {
+                serializable[k] = cfg[k];
+            }
+        });
+        if (config.customTextDerivers) {
+            serializable.customTextDerivers = config.customTextDerivers;
+        }
+        return serializable;
+    }
+
+    function applySavedConfig(savedConfig) {
+        try {
+            if (typeof savedConfig === 'string') {
+                try { savedConfig = JSON.parse(savedConfig); } catch (e) { console.error("JSON parse error", e); }
+            }
+            $.extend(config, savedConfig);
+
+            if (savedConfig.customTextDerivers) {
+                customTextDerivers = savedConfig.customTextDerivers;
+                applyTextDerivers();
+            }
+        } catch (e) {
+            console.error("Failed to load saved config", e);
+        }
+    }
+
+    function setupUI() {
+        setupCheckboxes();
+        setupFullScreen();
+        setupTextGrouping();
+        setupSaveParams();
+        setupBooleanMode();
+    }
+
+    function setupCheckboxes() {
+        var allKeys = getAllKeys();
         var $checkboxContainer = $("#field-checkboxes");
+        $checkboxContainer.empty();
+
         allKeys.forEach(function (key) {
-            var id = "field_cb_" + key.replace(/\s+/g, '_'); // sanitize ID
+            var id = "field_cb_" + key.replace(/\s+/g, '_');
+            var isChecked = true;
+            if (config.hiddenAttributes && config.hiddenAttributes.indexOf(key) > -1) {
+                isChecked = false;
+            }
+
             var $div = $("<div>");
-            var $cb = $("<input>", { type: "checkbox", id: id, value: key, checked: true });
+            var $cb = $("<input>", { type: "checkbox", id: id, value: key, checked: isChecked });
             var $label = $("<label>", { for: id }).text(" " + key);
             $div.append($cb).append($label);
             $checkboxContainer.append($div);
         });
 
-        // "Select All" / "Deselect All" handlers
         $("#select-all-fields").on("click", function () {
             $checkboxContainer.find("input[type='checkbox']").prop('checked', true);
         });
@@ -179,150 +209,49 @@ $(document).ready(function () {
             $checkboxContainer.find("input[type='checkbox']").prop('checked', false);
         });
 
-        // "Apply" handler
-        // --- Persistent Configuration Logic (Moved) ---
+        $("#apply-fields").on("click", function () {
+            render();
+        });
+    }
 
-        // Store current config to allow saving
-        var currentPivotConfig = {};
-
-        // Helper to extract serializable config
-        var getSerializableConfig = function (cfg) {
-            var serializable = {};
-            var keys = ["rows", "cols", "vals", "aggregatorName", "rendererName", "hiddenAttributes", "hiddenFromAggregators"];
-            keys.forEach(function (k) {
-                if (cfg[k] !== undefined) {
-                    serializable[k] = cfg[k];
-                }
+    function getAllKeys() {
+        var keySet = {};
+        if (window.redminePivotData) {
+            window.redminePivotData.forEach(function (record) {
+                Object.keys(record).forEach(function (k) { keySet[k] = true; });
             });
-            return serializable;
-        };
-
-        // onRefresh hooks
-        config.onRefresh = function (cfg) {
-            currentPivotConfig = getSerializableConfig(cfg);
-            if (config.hiddenAttributes) {
-                currentPivotConfig.hiddenAttributes = config.hiddenAttributes;
-            }
-            if (config.hiddenFromAggregators) {
-                currentPivotConfig.hiddenFromAggregators = config.hiddenFromAggregators;
-            }
-            // Preserve Custom Text Derivers
-            if (config.customTextDerivers) {
-                currentPivotConfig.customTextDerivers = config.customTextDerivers;
-            }
-        };
-
-        // --- Custom Text Grouping (Regex) ---
-        var customTextDerivers = []; // Array of { field, regex, format, name }
-
-        // Function to apply Custom Text Derivers to config
-        var applyTextDerivers = function () {
-            customTextDerivers.forEach(function (rule) {
-                try {
-                    var re = new RegExp(rule.regex);
-                    config.derivedAttributes[rule.name] = function (record) {
-                        var val = record[rule.field];
-                        if (val == null) return "null"; // Handle nulls safe? or just null
-                        val = "" + val; // force string
-                        var match = val.match(re);
-                        if (match) {
-                            var replacement = match[1] || match[0];
-                            return rule.format.replace("{0}", replacement);
-                        }
-                        return "Others"; // or val? "Others" is better for grouping non-matches
-                    };
-                } catch (e) {
-                    console.error("Invalid Regex or Deriver Error", e);
-                }
-            });
-
-            // Allow storing in config for persistence
-            config.customTextDerivers = customTextDerivers;
-        };
-
-        // Override defaults with Saved Config from Server if available
-        if (window.redminePivotQueryConfig) {
-            try {
-                var savedConfig = window.redminePivotQueryConfig;
-
-                // If it's a string (safely encoded from server), parse it.
-                if (typeof savedConfig === 'string') {
-                    try {
-                        savedConfig = JSON.parse(savedConfig);
-                    } catch (e) {
-                        console.error("RedminePivot: JSON parsing error:", e);
-                    }
-                }
-
-                // Merge saved config into main config
-                $.extend(config, savedConfig);
-
-                // Restore checkbox state based on hiddenAttributes
-                if (savedConfig.hiddenAttributes) {
-                    $checkboxContainer.find("input[type='checkbox']").each(function () {
-                        if (savedConfig.hiddenAttributes.indexOf($(this).val()) > -1) {
-                            $(this).prop('checked', false);
-                        } else {
-                            $(this).prop('checked', true);
-                        }
-                    });
-                }
-
-                // Restore Custom Text Derivers
-                if (savedConfig.customTextDerivers) {
-                    customTextDerivers = savedConfig.customTextDerivers;
-                    applyTextDerivers();
-                }
-            } catch (e) {
-                console.error("Failed to load saved configuration", e);
-            }
         }
+        return Object.keys(keySet).sort();
+    }
 
+    function setupFullScreen() {
+        $("#fullscreen-toggle").on("click", function () {
+            var $container = $("body");
+            var $pivotWrapper = $("#pivot-wrapper");
+            if ($pivotWrapper.length === 0) {
+                $("#pivot-controls, #pivot-table-output").wrapAll("<div id='pivot-wrapper'></div>");
+                $pivotWrapper = $("#pivot-wrapper");
+            }
+            $pivotWrapper.toggleClass("full-screen-pivot");
+            var isFull = $pivotWrapper.hasClass("full-screen-pivot");
+            $(this).text(isFull ? window.redminePivotLocaleStrings.exitFullScreen : window.redminePivotLocaleStrings.fullScreen);
+            window.dispatchEvent(new Event('resize'));
+        });
+    }
+
+    function setupSaveParams() {
         $("#save-query-btn").on("click", function () {
             var name = prompt(window.redminePivotLocaleStrings.promptSaveSettings);
             if (name) {
-                var configStr = JSON.stringify(currentPivotConfig);
+                var configStr = JSON.stringify(RedminePivot.currentConfig || getSerializableConfig(config));
                 $("#query_name").val(name);
                 $("#pivot_config").val(configStr);
                 $("#save-query-form").submit();
             }
         });
+    }
 
-        // Handler for Multi-item Aggregation (Questionnaire Mode)
-        var activateMultiBooleanMode = function () {
-            if (!window.redminePivotBooleanFields || window.redminePivotBooleanFields.length === 0) {
-                alert(window.redminePivotLocaleStrings.alertNoBoolean);
-                return;
-            }
-
-            if (!confirm(window.redminePivotLocaleStrings.confirmMultiBoolean)) {
-                return;
-            }
-
-            var meltedData = [];
-            window.redminePivotData.forEach(function (record) {
-                window.redminePivotBooleanFields.forEach(function (field) {
-                    if (record.hasOwnProperty(field)) {
-                        var newRecord = $.extend({}, record);
-                        newRecord[window.redminePivotLocaleStrings.labelItemName] = field;
-                        newRecord[window.redminePivotLocaleStrings.labelValue] = record[field];
-                        meltedData.push(newRecord);
-                    }
-                });
-            });
-
-            // Update configuration
-            var newConfig = $.extend({}, config);
-            newConfig.rows = [window.redminePivotLocaleStrings.labelItemName];
-            newConfig.cols = [window.redminePivotLocaleStrings.labelValue];
-            newConfig.aggregatorName = localeAgg.count;
-            newConfig.rendererName = localeRend.table;
-
-            // Render with melted data
-            $("#pivot-table-output").pivotUI(meltedData, newConfig, true);
-        };
-
-        // Add Multi-item Aggregation Button if boolean fields exist
+    function setupBooleanMode() {
         if (window.redminePivotBooleanFields && window.redminePivotBooleanFields.length > 0) {
             $("<button>")
                 .text(window.redminePivotLocaleStrings.buttonMultiBoolean)
@@ -331,134 +260,49 @@ $(document).ready(function () {
                 .click(activateMultiBooleanMode)
                 .insertAfter("#save-query-btn");
         }
+    }
 
-        var renderPivotTable = function () {
-            var hiddenAttributes = [];
-            var hiddenFromAggregators = [];
+    function activateMultiBooleanMode() {
+        if (!confirm(window.redminePivotLocaleStrings.confirmMultiBoolean)) return;
 
-            // 1. Calculate hiddenAttributes (from checkboxes)
-            $checkboxContainer.find("input[type='checkbox']").each(function () {
-                if (!$(this).is(':checked')) {
-                    var key = $(this).val();
-                    hiddenAttributes.push(key);
-
-                    // If it is a date field, also hide derived attributes
-                    if (window.redminePivotDateFields && window.redminePivotDateFields.indexOf(key) > -1) {
-                        hiddenAttributes.push(key + dateSuffixes.year);
-                        hiddenAttributes.push(key + dateSuffixes.month);
-                        hiddenAttributes.push(key + dateSuffixes.day);
-                        hiddenAttributes.push(key + dateSuffixes.yearMonth);
-                    }
+        var meltedData = [];
+        window.redminePivotData.forEach(function (record) {
+            window.redminePivotBooleanFields.forEach(function (field) {
+                if (record.hasOwnProperty(field)) {
+                    var newRecord = $.extend({}, record);
+                    newRecord[window.redminePivotLocaleStrings.labelItemName] = field;
+                    newRecord[window.redminePivotLocaleStrings.labelValue] = record[field];
+                    meltedData.push(newRecord);
                 }
             });
-
-            // 2. Calculate hiddenFromAggregators (All attributes - Numeric attributes)
-            // This ensures only numeric fields are shown in "Sum", "Average" etc.
-            if (window.redminePivotNumericFields) {
-                allKeys.forEach(function (key) {
-                    if (window.redminePivotNumericFields.indexOf(key) === -1) {
-                        hiddenFromAggregators.push(key);
-                    }
-                });
-
-                // Also hide derived date attributes from aggregators
-                for (var derivedKey in config.derivedAttributes) {
-                    hiddenFromAggregators.push(derivedKey);
-                }
-            }
-
-            config.hiddenAttributes = hiddenAttributes;
-            config.hiddenFromAggregators = hiddenFromAggregators;
-
-            $("#pivot-table-output").pivotUI(window.redminePivotData, config, true);
-        };
-
-        $("#apply-fields").on("click", function () {
-            renderPivotTable();
         });
 
-        // Initial Render
-        renderPivotTable();
+        var newConfig = $.extend({}, config);
+        newConfig.rows = [window.redminePivotLocaleStrings.labelItemName];
+        newConfig.cols = [window.redminePivotLocaleStrings.labelValue];
+        newConfig.aggregatorName = localeAgg.count;
+        newConfig.rendererName = localeRend.table;
 
-        // Full Screen Toggle
-        $("#fullscreen-toggle").on("click", function () {
-            var $container = $("#content"); // Redmine's main content area
-            // If #content is not found (some themes differ), fallback to body or create a wrapper
-            if ($container.length === 0) $container = $("body");
+        $("#pivot-table-output").pivotUI(meltedData, newConfig, true);
+    }
 
-            var $pivotWrapper = $("#pivot-wrapper");
-            if ($pivotWrapper.length === 0) {
-                $("#pivot-controls, #pivot-table-output").wrapAll("<div id='pivot-wrapper'></div>");
-                $pivotWrapper = $("#pivot-wrapper");
-            }
+    // --- Text Grouping Logic ---
 
-            $pivotWrapper.toggleClass("full-screen-pivot");
-
-            if ($pivotWrapper.hasClass("full-screen-pivot")) {
-                $(this).text(window.redminePivotLocaleStrings ? window.redminePivotLocaleStrings.exitFullScreen : "Exit Full Screen");
-            } else {
-                $(this).text(window.redminePivotLocaleStrings ? window.redminePivotLocaleStrings.fullScreen : "Full Screen");
-            }
-
-            // Retrigger resize for charts if needed
-            window.dispatchEvent(new Event('resize'));
-        });
-
-        // Text Grouping UI Handlers
+    function setupTextGrouping() {
         var $tgModal = $("#text-grouping-modal");
         var $tgFieldSelect = $("#tg-field-select");
         var $tgRulesList = $("#tg-active-rules");
 
-        var refreshRulesList = function () {
-            $tgRulesList.empty();
-            if (customTextDerivers.length === 0) {
-                $tgRulesList.append("<div style='color: #888;'>" + window.redminePivotLocaleStrings.labelNoRules + "</div>");
-                return;
-            }
-            var $table = $("<table style='width:100%; border-collapse: collapse;'>");
-            customTextDerivers.forEach(function (rule, index) {
-                var $tr = $("<tr>").css("border-bottom", "1px solid #eee");
-                $tr.append($("<td>").text(rule.name).css("padding", "5px"));
-                $tr.append($("<td>").text(rule.field + " -> " + rule.regex).css("font-size", "0.8em").css("padding", "5px"));
-                var $delBtn = $("<button>").text("x").css({
-                    "background": "none",
-                    "border": "none",
-                    "color": "red",
-                    "cursor": "pointer",
-                    "font-weight": "bold"
-                });
-                $delBtn.on("click", function () {
-                    customTextDerivers.splice(index, 1);
-                    applyTextDerivers();
-                    renderPivotTable();
-                    refreshRulesList();
-                });
-                $tr.append($("<td>").append($delBtn).css("text-align", "right"));
-                $table.append($tr);
-            });
-            $tgRulesList.append($table);
-        };
-
         $("#text-grouping-btn").on("click", function () {
-            // Populate fields dropdown
             $tgFieldSelect.empty();
-            allKeys.forEach(function (key) {
+            getAllKeys().forEach(function (key) {
                 $tgFieldSelect.append($("<option>").val(key).text(key));
             });
+            refreshRulesList($tgRulesList);
 
-            refreshRulesList();
-
-            // Localized button
             var buttons = {};
-            buttons[window.redminePivotLocaleStrings.buttonClose] = function () {
-                $(this).dialog("close");
-            };
-
-            $tgModal.dialog({
-                modal: true,
-                width: 400,
-                buttons: buttons
-            });
+            buttons[window.redminePivotLocaleStrings.buttonClose] = function () { $(this).dialog("close"); };
+            $tgModal.dialog({ modal: true, width: 400, buttons: buttons });
         });
 
         $("#tg-add-btn").on("click", function () {
@@ -471,31 +315,112 @@ $(document).ready(function () {
                 alert(window.redminePivotLocaleStrings.errorFillAll);
                 return;
             }
-
-            try {
-                new RegExp(regex); // validate regex
-            } catch (e) {
+            try { new RegExp(regex); } catch (e) {
                 alert(window.redminePivotLocaleStrings.errorInvalidRegex + e.message);
                 return;
             }
 
-            customTextDerivers.push({
-                field: field,
-                regex: regex,
-                format: format,
-                name: name
-            });
-
+            customTextDerivers.push({ field: field, regex: regex, format: format, name: name });
             applyTextDerivers();
-            renderPivotTable(); // Refresh pivot to show new field (might need to update UI for available fields)
+            render();
+            refreshRulesList($tgRulesList);
 
-            refreshRulesList();
-
-            // clear inputs
             $("#tg-name-input").val("");
             $("#tg-regex-input").val("");
-            // keep format as it's often similar
+        });
+    }
+
+    function refreshRulesList($container) {
+        $container.empty();
+        if (customTextDerivers.length === 0) {
+            $container.append("<div style='color: #888;'>" + window.redminePivotLocaleStrings.labelNoRules + "</div>");
+            return;
+        }
+        var $table = $("<table style='width:100%; border-collapse: collapse;'>");
+        customTextDerivers.forEach(function (rule, index) {
+            var $tr = $("<tr>").css("border-bottom", "1px solid #eee");
+            $tr.append($("<td>").text(rule.name).css("padding", "5px"));
+            $tr.append($("<td>").text(rule.field + " -> " + rule.regex).css("font-size", "0.8em").css("padding", "5px"));
+            var $delBtn = $("<button>").text("x").css({ "background": "none", "border": "none", "color": "red", "cursor": "pointer", "font-weight": "bold" });
+            $delBtn.on("click", function () {
+                customTextDerivers.splice(index, 1);
+                applyTextDerivers();
+                render();
+                refreshRulesList($container);
+            });
+            $tr.append($("<td>").append($delBtn).css("text-align", "right"));
+            $table.append($tr);
+        });
+        $container.append($table);
+    }
+
+    function applyTextDerivers() {
+        config.derivedAttributes = $.extend({}, derivedAttributes);
+        customTextDerivers.forEach(function (rule) {
+            try {
+                var re = new RegExp(rule.regex);
+                config.derivedAttributes[rule.name] = function (record) {
+                    var val = record[rule.field];
+                    if (val == null) return "null";
+                    val = "" + val;
+                    var match = val.match(re);
+                    if (match) {
+                        var replacement = match[1] || match[0];
+                        return rule.format.replace("{0}", replacement);
+                    }
+                    return "Others";
+                };
+            } catch (e) {
+                console.error("Invalid Regex", e);
+            }
+        });
+        config.customTextDerivers = customTextDerivers;
+    }
+
+    function render() {
+        var hiddenAttributes = [];
+        var hiddenFromAggregators = [];
+
+        // 1. Calculate hiddenAttributes from checkboxes
+        $("#field-checkboxes input[type='checkbox']").each(function () {
+            if (!$(this).is(':checked')) {
+                var key = $(this).val();
+                hiddenAttributes.push(key);
+                // Also hide derived date attributes
+                if (window.redminePivotDateFields && window.redminePivotDateFields.indexOf(key) > -1) {
+                    hiddenAttributes.push(key + dateSuffixes.year);
+                    hiddenAttributes.push(key + dateSuffixes.month);
+                    hiddenAttributes.push(key + dateSuffixes.day);
+                    hiddenAttributes.push(key + dateSuffixes.yearMonth);
+                }
+            }
         });
 
+        // 2. Calculate hiddenFromAggregators
+        var allKeys = getAllKeys();
+        if (window.redminePivotNumericFields) {
+            allKeys.forEach(function (key) {
+                if (window.redminePivotNumericFields.indexOf(key) === -1) {
+                    hiddenFromAggregators.push(key);
+                }
+            });
+            for (var derivedKey in config.derivedAttributes) {
+                hiddenFromAggregators.push(derivedKey);
+            }
+        }
+
+        config.hiddenAttributes = hiddenAttributes;
+        config.hiddenFromAggregators = hiddenFromAggregators;
+
+        $("#pivot-table-output").pivotUI(window.redminePivotData, config, true);
     }
+
+    return {
+        init: init
+    };
+
+})(jQuery);
+
+$(document).ready(function () {
+    RedminePivot.init();
 });

@@ -22,6 +22,8 @@ ja:
   label_regex_example: "(例: ^(\\d+) )"
   label_format_example: "(例: {0}* )"
   placeholder_group_name: "題名グループ"
+  error_pivot_data_loading: "ピボットデータの読み込みに失敗しました。もう一度お試しください。"
+  error_query_name_blank: "クエリ名は必須です。"
   # JS Strings
   js:
     render_error: "描画中にエラーが発生しました。"

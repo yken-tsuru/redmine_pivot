@@ -22,6 +22,8 @@ en:
   label_regex_example: "(e.g., ^(\\d+) )"
   label_format_example: "(e.g., {0}* )"
   placeholder_group_name: "e.g., Subject Group"
+  error_pivot_data_loading: "Failed to load pivot data. Please try again."
+  error_query_name_blank: "Query name cannot be blank."
   # JS Strings
   js:
     render_error: "An error occurred while rendering the pivot table."
