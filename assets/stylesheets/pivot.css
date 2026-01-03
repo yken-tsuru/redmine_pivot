@@ -66,3 +66,91 @@ td.pvtVals {
   font-size: 1.0em;
   /* Ensure controls don't get too huge if they inherit */
 }
+
+/* Refactoring: Extracted styles */
+.pivot-controls-container {
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  padding: 10px;
+  background-color: #f9f9f9;
+}
+
+.pivot-buttons-area {
+  margin-top: 5px;
+  text-align: right;
+}
+
+.pivot-button {
+  font-size: 0.9em;
+}
+
+.pivot-button-spacer {
+  margin-left: 10px;
+}
+
+.pivot-setting-row {
+  margin-bottom: 15px;
+}
+
+.pivot-width-full {
+  width: 100%;
+}
+
+.pivot-modal-actions {
+  text-align: right;
+  margin-top: 5px;
+}
+
+.pivot-rules-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.pivot-rules-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pivot-rule-row {
+  border-bottom: 1px solid #eee;
+}
+
+.pivot-rule-name {
+  padding: 5px;
+}
+
+.pivot-rule-detail {
+  font-size: 0.8em;
+  padding: 5px;
+}
+
+.pivot-rule-action {
+  text-align: right;
+}
+
+.pivot-delete-btn {
+  background: none;
+  border: none;
+  color: red;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.field-selection-area {
+  margin-top: 10px;
+}
+
+.field-buttons-area {
+  margin-bottom: 10px;
+}
+
+.apply-button {
+  font-weight: bold;
+  margin-left: 20px;
+}
+
+.field-checkboxes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 5px;
+}

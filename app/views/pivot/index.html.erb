@@ -1,15 +1,15 @@
 <% content_for :header_tags do %>
-  <link rel="stylesheet" href="<%= Redmine::Utils.relative_url_root %>/plugin_assets/redmine_pivot/stylesheets/jquery-ui.min.css">
-  <link rel="stylesheet" href="<%= Redmine::Utils.relative_url_root %>/plugin_assets/redmine_pivot/stylesheets/pivot.min.css">
-  <link rel="stylesheet" href="<%= Redmine::Utils.relative_url_root %>/plugin_assets/redmine_pivot/stylesheets/c3.min.css">
-  <link rel="stylesheet" href="<%= Redmine::Utils.relative_url_root %>/plugin_assets/redmine_pivot/stylesheets/pivot.css">
+  <%= stylesheet_link_tag 'jquery-ui.min', :plugin => 'redmine_pivot' %>
+  <%= stylesheet_link_tag 'pivot.min', :plugin => 'redmine_pivot' %>
+  <%= stylesheet_link_tag 'c3.min', :plugin => 'redmine_pivot' %>
+  <%= stylesheet_link_tag 'pivot', :plugin => 'redmine_pivot' %>
 
-  <script src="<%= Redmine::Utils.relative_url_root %>/plugin_assets/redmine_pivot/javascripts/jquery-ui.min.js"></script>
-  <script src="<%= Redmine::Utils.relative_url_root %>/plugin_assets/redmine_pivot/javascripts/d3.min.js"></script>
-  <script src="<%= Redmine::Utils.relative_url_root %>/plugin_assets/redmine_pivot/javascripts/c3.min.js"></script>
-  <script src="<%= Redmine::Utils.relative_url_root %>/plugin_assets/redmine_pivot/javascripts/pivot.min.js"></script>
-  <script src="<%= Redmine::Utils.relative_url_root %>/plugin_assets/redmine_pivot/javascripts/c3_renderers.min.js"></script>
-  <script src="<%= Redmine::Utils.relative_url_root %>/plugin_assets/redmine_pivot/javascripts/pivot.js"></script>
+  <%= javascript_include_tag 'jquery-ui.min', :plugin => 'redmine_pivot' %>
+  <%= javascript_include_tag 'd3.min', :plugin => 'redmine_pivot' %>
+  <%= javascript_include_tag 'c3.min', :plugin => 'redmine_pivot' %>
+  <%= javascript_include_tag 'pivot.min', :plugin => 'redmine_pivot' %>
+  <%= javascript_include_tag 'c3_renderers.min', :plugin => 'redmine_pivot' %>
+  <%= javascript_include_tag 'pivot', :plugin => 'redmine_pivot' %>
 <% end %>
 
 <% content_for :sidebar do %>
@@ -29,83 +29,72 @@
 <h2><%= l(:label_pivot) %></h2>
 
 
-<div id="pivot-controls" style="margin-bottom: 20px; border: 1px solid #ddd; padding: 10px; background-color: #f9f9f9;">
-  <div style="cursor: pointer; font-weight: bold;" onclick="$('#field-selection-area').toggle();">
-    <span class="icon icon-settings"><%= l(:label_settings) %> (<%= l(:button_configure) %>)</span>
-    <span id="field-toggle-icon" style="float: right;">▼</span>
-  </div>
-  <div style="margin-top: 5px; text-align: right;">
-      <button type="button" id="fullscreen-toggle" style="font-size: 0.9em;"><%= l(:button_fullscreen) %></button>
-      <button type="button" id="text-grouping-btn" style="font-size: 0.9em; margin-left: 10px;"><%= l(:button_text_grouping) %></button>
-      <button type="button" id="save-query-btn" style="font-size: 0.9em; margin-left: 10px;"><%= l(:button_save) %></button>
-  </div>
-  
-  <div id="text-grouping-modal" title="<%= l(:label_text_grouping_settings) %>" style="display:none;">
-    <div style="margin-bottom: 15px;">
-        <label><%= l(:label_target_field) %>:</label>
-        <select id="tg-field-select" style="width: 100%;"></select>
-    </div>
-    <div style="margin-bottom: 15px;">
-        <label><%= l(:label_regex) %> <%= l(:label_regex_example) %>:</label>
-        <input type="text" id="tg-regex-input" style="width: 100%;" placeholder="^(\d+)">
-    </div>
-    <div style="margin-bottom: 15px;">
-        <label><%= l(:label_format) %> <%= l(:label_format_example) %>:</label>
-        <input type="text" id="tg-format-input" style="width: 100%;" value="{0}*">
-    </div>
-    <div style="margin-bottom: 15px;">
-        <label><%= l(:label_group_name) %>:</label>
-        <input type="text" id="tg-name-input" style="width: 100%;" placeholder="<%= l(:placeholder_group_name) %>">
-        <div style="text-align: right; margin-top: 5px;">
-            <button type="button" id="tg-add-btn"><%= l(:button_add) %></button>
+<fieldset class="collapsible collapsed">
+  <legend onclick="toggleFieldset(this);" class="icon icon-collapsed"><%= l(:label_settings) %></legend>
+  <div style="display: none;">
+    <div class="pivot-controls-container">
+      <div class="pivot-buttons-area">
+          <button type="button" id="fullscreen-toggle" class="pivot-button"><%= l(:button_fullscreen) %></button>
+          <button type="button" id="text-grouping-btn" class="pivot-button pivot-button-spacer"><%= l(:button_text_grouping) %></button>
+          <button type="button" id="save-query-btn" class="pivot-button pivot-button-spacer"><%= l(:button_save) %></button>
+      </div>
+      
+      <div id="text-grouping-modal" title="<%= l(:label_text_grouping_settings) %>" style="display:none;">
+        <div class="pivot-setting-row">
+            <label><%= l(:label_target_field) %>:</label>
+            <select id="tg-field-select" class="pivot-width-full"></select>
         </div>
-    </div>
-    <hr>
-    <div id="tg-active-rules" style="max-height: 200px; overflow-y: auto;">
-        <!-- Rules will be listed here -->
-    </div>
-  </div>
-  
-  <%= form_tag({:controller => 'pivot', :action => 'save', :project_id => @project}, :id => 'save-query-form', :style => 'display:none;') do %>
-    <%= hidden_field_tag 'query_name' %>
-    <%= hidden_field_tag 'pivot_config' %>
-  <% end %>
+        <div class="pivot-setting-row">
+            <label><%= l(:label_regex) %> <%= l(:label_regex_example) %>:</label>
+            <input type="text" id="tg-regex-input" class="pivot-width-full" placeholder="^(\d+)">
+        </div>
+        <div class="pivot-setting-row">
+            <label><%= l(:label_format) %> <%= l(:label_format_example) %>:</label>
+            <input type="text" id="tg-format-input" class="pivot-width-full" value="{0}*">
+        </div>
+        <div class="pivot-setting-row">
+            <label><%= l(:label_group_name) %>:</label>
+            <input type="text" id="tg-name-input" class="pivot-width-full" placeholder="<%= l(:placeholder_group_name) %>">
+            <div class="pivot-modal-actions">
+                <button type="button" id="tg-add-btn"><%= l(:button_add) %></button>
+            </div>
+        </div>
+        <hr>
+        <div id="tg-active-rules" class="pivot-rules-list">
+            <!-- Rules will be listed here -->
+        </div>
+      </div>
+      
+      <%= form_tag({:controller => 'pivot', :action => 'save', :project_id => @project}, :id => 'save-query-form', :style => 'display:none;') do %>
+        <%= hidden_field_tag 'query_name' %>
+        <%= hidden_field_tag 'pivot_config' %>
+      <% end %>
 
-  <div id="field-selection-area" style="display: none; margin-top: 10px;">
-    <div style="margin-bottom: 10px;">
-      <button type="button" id="select-all-fields"><%= l(:button_check_all) %></button>
-      <button type="button" id="deselect-all-fields"><%= l(:button_uncheck_all) %></button>
-      <button type="button" id="apply-fields" style="font-weight: bold; margin-left: 20px;"><%= l(:button_apply) %></button>
-    </div>
-    <div id="field-checkboxes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 5px;">
-      <!-- Checkboxes will be generated here -->
+      <div id="field-selection-area" class="field-selection-area" style="display: block;">
+        <div class="field-buttons-area">
+          <button type="button" id="select-all-fields"><%= l(:button_check_all) %></button>
+          <button type="button" id="deselect-all-fields"><%= l(:button_uncheck_all) %></button>
+          <button type="button" id="apply-fields" class="apply-button"><%= l(:button_apply) %></button>
+        </div>
+        <div id="field-checkboxes" class="field-checkboxes-grid">
+          <!-- Checkboxes will be generated here -->
+        </div>
+      </div>
     </div>
   </div>
-</div>
+</fieldset>
 
 <div id="pivot-table-output"></div>
 
 <script>
-  // Expose data to global scope
-  window.redminePivotData = <%= @issues_json.to_json.html_safe %>;
-  
-  // Default configuration with localized field names
-
-
-  window.redminePivotOptions = <%= pivot_default_options.to_json.html_safe %>;
-  
-  // Localized strings for JS
-  window.redminePivotLocaleStrings = <%= pivot_locale_data.to_json.html_safe %>;
-  
-  // Date fields metadata
-  window.redminePivotDateFields = <%= @date_fields.to_json.html_safe %>;
-  
-  // Numeric fields metadata (for restricting aggregators)
-  window.redminePivotNumericFields = <%= @numeric_fields.to_json.html_safe %>;
-
-  // Boolean fields metadata (for multi-column aggregation)
-  window.redminePivotBooleanFields = <%= @boolean_fields.to_json.html_safe %>;
-
-  // Saved configuration from server
-  window.redminePivotQueryConfig = <%= @pivot_config.to_json.html_safe %>;
+  // Consolidated configuration object
+  window.redminePivotConfig = {
+    data: <%= @issues_json.to_json.html_safe %>,
+    options: <%= pivot_default_options.to_json.html_safe %>,
+    localeStrings: <%= pivot_locale_data.to_json.html_safe %>,
+    dateFields: <%= @date_fields.to_json.html_safe %>,
+    numericFields: <%= @numeric_fields.to_json.html_safe %>,
+    booleanFields: <%= @boolean_fields.to_json.html_safe %>,
+    savedConfig: <%= @pivot_config.to_json.html_safe %>
+  };
 </script>

@@ -10,54 +10,27 @@ class PivotController < ApplicationController
   def index
     retrieve_query
     @sidebar_queries = IssueQuery.visible.where(project: @project)
-
-    # Build base scope with error handling
     scope = build_issue_scope
 
-    # Use Service Object for data fetching and processing
-    begin
-      builder = PivotTableBuilder.new(@project, @query, scope).run
-
-      @issues_json = builder.issues_json
-      @date_fields = builder.date_fields
-      @numeric_fields = builder.numeric_fields
-      @boolean_fields = builder.boolean_fields
-    rescue => e
-      logger.error("PivotTableBuilder error: #{e.message}\n#{e.backtrace.join("\n")}")
-      flash.now[:error] = l(:error_pivot_data_loading)
-      @issues_json = []
-      @date_fields = []
-      @numeric_fields = []
-      @boolean_fields = []
-    end
+    fetch_pivot_data(scope)
     
-    # Pass pivot config to view if available
     @pivot_config = @query.try(:pivot_config)
   end
 
   def save
     query_name = params[:query_name].to_s.strip
     
-    # Validate query name
     if query_name.blank?
       flash[:error] = l(:error_query_name_blank)
-      return redirect_to :controller => 'pivot', :action => 'index', :project_id => @project
+      return redirect_to_index
     end
 
-    @query = IssueQuery.new
-    @query.project = @project
-    @query.user = User.current
-    @query.name = query_name
-    @query.pivot_config = params[:pivot_config]
-    @query.visibility = IssueQuery::VISIBILITY_PRIVATE
-    @query.column_names = ['id', 'subject', 'status', 'tracker', 'priority']
-    
-    if @query.save
+    if create_pivot_query(query_name, params[:pivot_config])
       flash[:notice] = l(:notice_successful_create)
       redirect_to :controller => 'pivot', :action => 'index', :project_id => @project, :query_id => @query.id
     else
       flash[:error] = @query.errors.full_messages.join(", ")
-      redirect_to :controller => 'pivot', :action => 'index', :project_id => @project
+      redirect_to_index
     end
   end
 
@@ -69,11 +42,40 @@ class PivotController < ApplicationController
     render_404
   end
 
+  def redirect_to_index
+    redirect_to :controller => 'pivot', :action => 'index', :project_id => @project
+  end
+
+  def fetch_pivot_data(scope)
+    builder = PivotTableBuilder.new(@project, @query, scope).run
+    @issues_json = builder.issues_json
+    @date_fields = builder.date_fields
+    @numeric_fields = builder.numeric_fields
+    @boolean_fields = builder.boolean_fields
+  rescue => e
+    logger.error("PivotTableBuilder error: #{e.message}\n#{e.backtrace.join("\n")}")
+    flash.now[:error] = l(:error_pivot_data_loading)
+    @issues_json = []
+    @date_fields = []
+    @numeric_fields = []
+    @boolean_fields = []
+  end
+
+  def create_pivot_query(name, config)
+    @query = IssueQuery.new
+    @query.project = @project
+    @query.user = User.current
+    @query.name = name
+    @query.pivot_config = config
+    @query.visibility = IssueQuery::VISIBILITY_PRIVATE
+    @query.column_names = ['id', 'subject', 'status', 'tracker', 'priority']
+    @query.save
+  end
+
   def build_issue_scope
     base_scope = @project.issues.visible
       .includes(:status, :tracker, :priority, :assigned_to, :category, :fixed_version, :author)
 
-    # Apply query filter with error handling
     if @query.valid?
       begin
         base_scope.where(@query.statement)
