@@ -63,7 +63,7 @@ class PivotTableBuilderTest < ActiveSupport::TestCase
     json = builder.issues_json
     
     # Check for presence of any custom field key
-    custom_fields = builder.instance_variable_get(:@all_custom_fields)
+    custom_fields = builder.all_custom_fields
     if custom_fields.any?
       cf_name = custom_fields.first.name
       # Custom field should be in the JSON if it has values
@@ -87,7 +87,7 @@ class PivotTableBuilderTest < ActiveSupport::TestCase
 
   def test_identify_fields_with_custom_fields
     builder = PivotTableBuilder.new(@project, @query, @scope).run
-    custom_fields = builder.instance_variable_get(:@all_custom_fields)
+    custom_fields = builder.all_custom_fields
     
     # Verify that custom fields are properly categorized
     date_custom_fields = custom_fields.select { |cf| cf.field_format == 'date' }

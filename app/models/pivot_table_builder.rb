@@ -1,17 +1,38 @@
 class PivotTableBuilder
   include Redmine::I18n
 
+  # Field key constants for consistent field naming
+  ISSUE_ID_KEY = '#'
+  FIELD_KEYS = {
+    subject: :field_subject,
+    tracker: :field_tracker,
+    status: :field_status,
+    priority: :field_priority,
+    author: :field_author,
+    assigned_to: :field_assigned_to,
+    category: :field_category,
+    fixed_version: :field_fixed_version,
+    start_date: :field_start_date,
+    due_date: :field_due_date,
+    done_ratio: :field_done_ratio,
+    estimated_hours: :field_estimated_hours
+  }.freeze
+
   attr_reader :project, :query, :scope, :issues
-  attr_reader :issues_json, :date_fields, :numeric_fields, :boolean_fields
+  attr_reader :issues_json, :date_fields, :numeric_fields, :boolean_fields, :all_custom_fields
 
   def initialize(project, query, scope)
     @project = project
     @query = query
     @scope = scope
+    @custom_fields_by_format = {}
   end
 
+  # Execute the pivot table data building process
+  # @return [PivotTableBuilder] self for method chaining
   def run
     @issues = fetch_data
+    load_custom_fields
     @issues_json = build_json
     @date_fields, @numeric_fields, @boolean_fields = identify_fields
     self
@@ -19,11 +40,28 @@ class PivotTableBuilder
 
   private
 
+  # Execute the query and load associations
+  # @return [Array<Issue>] array of issue objects
   def fetch_data
-    # Execute the query and load associations
     @scope.to_a
   end
 
+  # Load and categorize custom fields by format to avoid repeated filtering
+  # Populates @all_custom_fields and @custom_fields_by_format
+  def load_custom_fields
+    @all_custom_fields = @project.trackers.includes(:custom_fields)
+                                  .map(&:custom_fields).flatten.uniq
+
+    # Pre-categorize custom fields by format to avoid multiple filtering passes
+    @all_custom_fields.each do |cf|
+      format = cf.field_format
+      @custom_fields_by_format[format] ||= []
+      @custom_fields_by_format[format] << cf
+    end
+  end
+
+  # Build JSON representation of issues with all associated data
+  # @return [Array<Hash>] array of issue data hashes
   def build_json
     return [] if @issues.empty?
 
@@ -34,68 +72,76 @@ class PivotTableBuilder
                          .pluck(:custom_field_id, :customized_id, :value)
     
     cv_by_issue = cv_rows.group_by { |row| row[1] }
-
-    # Bulk fetch Custom Field Definitions with eager loading
-    @all_custom_fields = @project.trackers.includes(:custom_fields)
-                                  .map(&:custom_fields).flatten.uniq
     cf_id_to_name = @all_custom_fields.each_with_object({}) { |cf, h| h[cf.id] = cf.name }
 
-    # Pre-calculate keys
-    k_id = '#'
-    k_subject = l(:field_subject)
-    k_tracker = l(:field_tracker)
-    k_status = l(:field_status)
-    k_priority = l(:field_priority)
-    k_author = l(:field_author)
-    k_assigned_to = l(:field_assigned_to)
-    k_category = l(:field_category)
-    k_fixed_version = l(:field_fixed_version)
-    k_start_date = l(:field_start_date)
-    k_due_date = l(:field_due_date)
-    k_done_ratio = l(:field_done_ratio)
-    k_estimated_hours = l(:field_estimated_hours)
+    # Pre-calculate localized keys
+    localized_keys = build_localized_keys
 
     @issues.map do |issue|
-      data = {
-        k_id => issue.id,
-        k_subject => issue.subject,
-        k_tracker => issue.tracker&.name || '',
-        k_status => issue.status&.name || '',
-        k_priority => issue.priority&.name || '',
-        k_author => issue.author&.name || '',
-        k_assigned_to => issue.assigned_to&.name || '',
-        k_category => issue.category&.name || '',
-        k_fixed_version => issue.fixed_version&.name || '',
-        k_start_date => issue.start_date&.to_s || '',
-        k_due_date => issue.due_date&.to_s || '',
-        k_done_ratio => issue.done_ratio,
-        k_estimated_hours => issue.estimated_hours
-      }
-
-      # Append Custom Fields
-      if cvs = cv_by_issue[issue.id]
-        cvs.each do |row|
-          if cf_name = cf_id_to_name[row[0]]
-             data[cf_name] = row[2].to_s
-          end
-        end
-      end
-
-      data
+      build_issue_data(issue, localized_keys, cv_by_issue, cf_id_to_name)
     end
   end
 
-  def identify_fields
-    # Date fields
-    date_fields = [l(:field_start_date), l(:field_due_date)]
-    date_fields += @all_custom_fields.select { |cf| cf.field_format == 'date' }.map(&:name)
+  # Build a hash of localized field keys for efficient access
+  # @return [Hash] mapping of field symbols to localized strings
+  def build_localized_keys
+    keys = { id: ISSUE_ID_KEY }
+    FIELD_KEYS.each { |sym, i18n_key| keys[sym] = l(i18n_key) }
+    keys
+  end
 
-    # Numeric fields
+  # Build a single issue data hash with standard and custom fields
+  # @param issue [Issue] the issue object
+  # @param localized_keys [Hash] pre-calculated localized field keys
+  # @param cv_by_issue [Hash] custom values indexed by issue id
+  # @param cf_id_to_name [Hash] custom field id to name mapping
+  # @return [Hash] issue data with all fields
+  def build_issue_data(issue, localized_keys, cv_by_issue, cf_id_to_name)
+    data = {
+      localized_keys[:id] => issue.id,
+      localized_keys[:subject] => issue.subject,
+      localized_keys[:tracker] => issue.tracker&.name || '',
+      localized_keys[:status] => issue.status&.name || '',
+      localized_keys[:priority] => issue.priority&.name || '',
+      localized_keys[:author] => issue.author&.name || '',
+      localized_keys[:assigned_to] => issue.assigned_to&.name || '',
+      localized_keys[:category] => issue.category&.name || '',
+      localized_keys[:fixed_version] => issue.fixed_version&.name || '',
+      localized_keys[:start_date] => issue.start_date&.to_s || '',
+      localized_keys[:due_date] => issue.due_date&.to_s || '',
+      localized_keys[:done_ratio] => issue.done_ratio,
+      localized_keys[:estimated_hours] => issue.estimated_hours
+    }
+
+    # Append custom field values if present
+    if (cvs = cv_by_issue[issue.id])
+      cvs.each do |cf_id, _issue_id, value|
+        if (cf_name = cf_id_to_name[cf_id])
+          data[cf_name] = value.to_s
+        end
+      end
+    end
+
+    data
+  end
+
+  # Identify and categorize standard and custom fields by type
+  # @return [Array<Array>] tuple of [date_fields, numeric_fields, boolean_fields]
+  def identify_fields
+    # Standard date fields
+    date_fields = [l(:field_start_date), l(:field_due_date)]
+    date_fields += @custom_fields_by_format['date']&.map(&:name) || []
+
+    # Standard numeric fields
     numeric_fields = [l(:field_estimated_hours), l(:field_done_ratio)]
-    numeric_fields += @all_custom_fields.select { |cf| %w(int float).include?(cf.field_format) }.map(&:name)
+    numeric_numeric_cfs = @custom_fields_by_format.slice('int', 'float')
+                                                  .values
+                                                  .flatten
+                                                  .map(&:name)
+    numeric_fields += numeric_numeric_cfs
 
     # Boolean fields
-    boolean_fields = @all_custom_fields.select { |cf| cf.field_format == 'bool' }.map(&:name)
+    boolean_fields = @custom_fields_by_format['bool']&.map(&:name) || []
 
     [date_fields, numeric_fields, boolean_fields]
   end
