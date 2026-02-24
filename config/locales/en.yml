@@ -24,6 +24,7 @@ en:
   placeholder_group_name: "e.g., Subject Group"
   error_pivot_data_loading: "Failed to load pivot data. Please try again."
   error_query_name_blank: "Query name cannot be blank."
+  error_pivot_config_too_large: "The configuration data is too large to save. Please simplify your settings."
   # JS Strings
   js:
     render_error: "An error occurred while rendering the pivot table."

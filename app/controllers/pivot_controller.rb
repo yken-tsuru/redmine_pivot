@@ -1,16 +1,22 @@
 class PivotController < ApplicationController
 
+  # Maximum number of issues to load for pivot table
+  MAX_ISSUES = 5000
+  # Maximum size of pivot_config in bytes
+  MAX_PIVOT_CONFIG_SIZE = 64.kilobytes
 
   helper :queries
   helper :pivot
   include QueriesHelper
 
-  before_action :find_project, :authorize, :only => [:index, :save]
+  before_action :find_project, :authorize, only: [:index, :save]
 
   # Display pivot table of issues for the project
   # Builds a scope based on the current query and renders pivot data
   def index
     retrieve_query
+    @query ||= IssueQuery.new(:name => '_', :project => @project)
+
     @sidebar_queries = IssueQuery.visible.where(project: @project)
     scope = build_issue_scope
 
@@ -30,9 +36,18 @@ class PivotController < ApplicationController
       return redirect_to_index
     end
 
-    if create_pivot_query(query_name, params[:pivot_config])
+    pivot_config = params[:pivot_config].to_s
+    if pivot_config.bytesize > MAX_PIVOT_CONFIG_SIZE
+      flash[:error] = l(:error_pivot_config_too_large)
+      return redirect_to_index
+    end
+
+    service = PivotQueryService.new(@project, User.current)
+    @query = service.create_query(query_name, pivot_config)
+
+    if @query.persisted?
       flash[:notice] = l(:notice_successful_create)
-      redirect_to :controller => 'pivot', :action => 'index', :project_id => @project, :query_id => @query.id
+      redirect_to controller: 'pivot', action: 'index', project_id: @project, query_id: @query.id
     else
       flash[:error] = @query.errors.full_messages.join(", ")
       redirect_to_index
@@ -52,7 +67,7 @@ class PivotController < ApplicationController
 
   # Redirect to pivot index page for current project
   def redirect_to_index
-    redirect_to :controller => 'pivot', :action => 'index', :project_id => @project
+    redirect_to controller: 'pivot', action: 'index', project_id: @project
   end
 
   # Fetch pivot data from PivotTableBuilder and assign to instance variables
@@ -74,35 +89,32 @@ class PivotController < ApplicationController
     @boolean_fields = []
   end
 
-  # Create a new pivot query with the given name and configuration
-  # @param name [String] the name of the query
-  # @param config [Hash] the pivot configuration
-  # @return [Boolean] true if save was successful, false otherwise
-  def create_pivot_query(name, config)
-    @query = IssueQuery.new
-    @query.project = @project
-    @query.user = User.current
-    @query.name = name
-    @query.pivot_config = config
-    @query.visibility = IssueQuery::VISIBILITY_PRIVATE
-    @query.column_names = ['id', 'subject', 'status', 'tracker', 'priority']
-    @query.save
-  end
-
   # Build an ActiveRecord scope for issues with appropriate filtering
   # Applies query statement if valid, returns base scope on error
+  # Limits to MAX_ISSUES to prevent memory issues with large projects
   # @return [ActiveRecord::Relation] the issue scope
   def build_issue_scope
     base_scope = @project.issues.visible
       .includes(:status, :tracker, :priority, :assigned_to, :category, :fixed_version, :author)
 
-    return base_scope unless @query.valid?
-
-    begin
-      base_scope.where(@query.statement)
-    rescue => e
-      logger.warn("Query filter failed: #{e.message}")
+    filtered_scope = if @query.valid?
+      begin
+        base_scope.where(@query.statement)
+      rescue => e
+        logger.warn("Query filter failed: #{e.message}")
+        base_scope
+      end
+    else
       base_scope
     end
+
+    total_count = filtered_scope.count
+    if total_count > MAX_ISSUES
+      flash.now[:warning] = l(:warning_too_many_issues, count: MAX_ISSUES)
+      filtered_scope = filtered_scope.limit(MAX_ISSUES)
+    end
+
+    filtered_scope
   end
 end
+

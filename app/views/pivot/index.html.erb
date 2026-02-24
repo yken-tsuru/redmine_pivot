@@ -31,7 +31,7 @@
 
 <fieldset class="collapsible collapsed">
   <legend onclick="toggleFieldset(this);" class="icon icon-collapsed"><%= l(:label_settings) %></legend>
-  <div style="display: none;">
+  <div class="u-hidden">
     <div class="pivot-controls-container">
       <div class="pivot-buttons-area">
           <button type="button" id="fullscreen-toggle" class="pivot-button"><%= l(:button_fullscreen) %></button>
@@ -39,7 +39,7 @@
           <button type="button" id="save-query-btn" class="pivot-button pivot-button-spacer"><%= l(:button_save) %></button>
       </div>
       
-      <div id="text-grouping-modal" title="<%= l(:label_text_grouping_settings) %>" style="display:none;">
+      <div id="text-grouping-modal" title="<%= l(:label_text_grouping_settings) %>" class="u-hidden">
         <div class="pivot-setting-row">
             <label><%= l(:label_target_field) %>:</label>
             <select id="tg-field-select" class="pivot-width-full"></select>
@@ -65,12 +65,12 @@
         </div>
       </div>
       
-      <%= form_tag({:controller => 'pivot', :action => 'save', :project_id => @project}, :id => 'save-query-form', :style => 'display:none;') do %>
+      <%= form_tag({:controller => 'pivot', :action => 'save', :project_id => @project}, id: 'save-query-form', class: 'u-hidden') do %>
         <%= hidden_field_tag 'query_name' %>
         <%= hidden_field_tag 'pivot_config' %>
       <% end %>
 
-      <div id="field-selection-area" class="field-selection-area" style="display: block;">
+      <div id="field-selection-area" class="field-selection-area">
         <div class="field-buttons-area">
           <button type="button" id="select-all-fields"><%= l(:button_check_all) %></button>
           <button type="button" id="deselect-all-fields"><%= l(:button_uncheck_all) %></button>
@@ -86,15 +86,12 @@
 
 <div id="pivot-table-output"></div>
 
-<script>
-  // Consolidated configuration object
-  window.redminePivotConfig = {
-    data: <%= @issues_json.to_json.html_safe %>,
-    options: <%= pivot_default_options.to_json.html_safe %>,
-    localeStrings: <%= pivot_locale_data.to_json.html_safe %>,
-    dateFields: <%= @date_fields.to_json.html_safe %>,
-    numericFields: <%= @numeric_fields.to_json.html_safe %>,
-    booleanFields: <%= @boolean_fields.to_json.html_safe %>,
-    savedConfig: <%= @pivot_config.to_json.html_safe %>
-  };
-</script>
+<div id="pivot-config-data" class="u-hidden"
+  data-issues="<%= j @issues_json.to_json %>"
+  data-options="<%= j pivot_default_options.to_json %>"
+  data-locale-strings="<%= j pivot_locale_data.to_json %>"
+  data-date-fields="<%= j @date_fields.to_json %>"
+  data-numeric-fields="<%= j @numeric_fields.to_json %>"
+  data-boolean-fields="<%= j @boolean_fields.to_json %>"
+  data-saved-config="<%= j(@pivot_config.to_json) %>"
+></div>

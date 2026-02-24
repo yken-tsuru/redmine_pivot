@@ -103,7 +103,8 @@ class PivotTableBuilderTest < ActiveSupport::TestCase
   end
 
   def test_run_method_returns_self
-    builder = PivotTableBuilder.new(@project, @query, @scope).run
-    assert_equal builder, builder, "run method should return self for chaining"
+    builder = PivotTableBuilder.new(@project, @query, @scope)
+    result = builder.run
+    assert_same builder, result, "run method should return self for method chaining"
   end
 end

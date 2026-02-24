@@ -1,3 +1,8 @@
+/* Utility */
+.u-hidden {
+  display: none;
+}
+
 #pivot-table-output {
   margin-top: 20px;
   overflow-x: auto;
@@ -67,7 +72,7 @@ td.pvtVals {
   /* Ensure controls don't get too huge if they inherit */
 }
 
-/* Refactoring: Extracted styles */
+/* Controls container */
 .pivot-controls-container {
   margin-bottom: 20px;
   border: 1px solid #ddd;

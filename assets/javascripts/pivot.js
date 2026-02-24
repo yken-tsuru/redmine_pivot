@@ -462,5 +462,18 @@ var RedminePivot = (function ($) {
 })(jQuery);
 
 $(document).ready(function () {
+    // Load configuration from data attributes (XSS-safe)
+    var $configEl = $('#pivot-config-data');
+    if ($configEl.length) {
+        window.redminePivotConfig = {
+            data: JSON.parse($configEl.attr('data-issues')),
+            options: JSON.parse($configEl.attr('data-options')),
+            localeStrings: JSON.parse($configEl.attr('data-locale-strings')),
+            dateFields: JSON.parse($configEl.attr('data-date-fields')),
+            numericFields: JSON.parse($configEl.attr('data-numeric-fields')),
+            booleanFields: JSON.parse($configEl.attr('data-boolean-fields')),
+            savedConfig: JSON.parse($configEl.attr('data-saved-config'))
+        };
+    }
     RedminePivot.init();
 });
