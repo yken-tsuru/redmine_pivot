@@ -4,7 +4,7 @@ Redmine::Plugin.register :redmine_pivot do
   name 'Redmine Pivot Plugin'
   author 'Yken tsuru'
   description 'A plugin to display Redmine tickets in a pivot table.'
-  version '0.0.1'
+  version '0.0.2'
   
   project_module :pivot do
     permission :view_pivot, :pivot => [:index, :save]

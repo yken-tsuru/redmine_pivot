@@ -18,7 +18,7 @@ Redmineのチケットをピボットテーブル形式で表示・集計する�
    （ディレクトリ名は `redmine_pivot` としてください）
    ```bash
    cd /path/to/redmine/plugins
-   git clone https://your-repository-url/redmine_pivot.git
+   git clone https://github.com/yken-tsuru/redmine_pivot.git
    ```
 
 2. Redmineを再起動します。

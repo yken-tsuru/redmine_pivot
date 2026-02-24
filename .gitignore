@@ -1,0 +1,32 @@
+# Ruby / Rails
+*.rbc
+*.sassc
+.sass-cache
+capybara-*.html
+.rspec
+/.bundle
+/vendor/bundle
+/log/*
+!/log/.keep
+/tmp
+.byebug_history
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Unit test / coverage reports
+coverage/
+test/coverage/
+
+# Plugin specific
+tmp/

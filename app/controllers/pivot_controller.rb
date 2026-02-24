@@ -1,93 +1,120 @@
 class PivotController < ApplicationController
 
+  # Maximum number of issues to load for pivot table
+  MAX_ISSUES = 5000
+  # Maximum size of pivot_config in bytes
+  MAX_PIVOT_CONFIG_SIZE = 64.kilobytes
 
   helper :queries
+  helper :pivot
   include QueriesHelper
 
-  before_action :find_project, :authorize, :only => [:index, :save]
+  before_action :find_project, :authorize, only: [:index, :save]
 
+  # Display pivot table of issues for the project
+  # Builds a scope based on the current query and renders pivot data
   def index
     retrieve_query
+    @query ||= IssueQuery.new(:name => '_', :project => @project)
+
     @sidebar_queries = IssueQuery.visible.where(project: @project)
+    scope = build_issue_scope
 
-    if @query.valid?
-      @issues = @query.issues(:include => [:status, :tracker, :priority, :assigned_to, :category, :fixed_version, :custom_values => :custom_field], :limit => 5000)
-      if @query.issue_count > 5000
-        flash.now[:warning] = l(:warning_too_many_issues, :count => 5000)
-      end
-    else
-      @issues = @project.issues.visible.includes(:status, :tracker, :priority, :assigned_to, :category, :fixed_version, :custom_values => :custom_field).limit(5000)
-    end
-
-    @issues_json = @issues.map do |issue|
-      data = {
-        '#' => issue.id,
-        l(:field_subject) => issue.subject,
-        l(:field_tracker) => issue.tracker.name,
-        l(:field_status) => issue.status.name,
-        l(:field_priority) => issue.priority.name,
-        l(:field_author) => issue.author.name,
-        l(:field_assigned_to) => issue.assigned_to ? issue.assigned_to.name : '',
-        l(:field_category) => issue.category ? issue.category.name : '',
-        l(:field_fixed_version) => issue.fixed_version ? issue.fixed_version.name : '',
-        l(:field_start_date) => issue.start_date.to_s,
-        l(:field_due_date) => issue.due_date.to_s,
-        l(:field_done_ratio) => issue.done_ratio,
-        l(:field_estimated_hours) => issue.estimated_hours
-      }
-
-      issue.custom_field_values.each do |value|
-        data[value.custom_field.name] = value.value.to_s
-      end
-
-      data
-    end
-
-    # Identify date fields for frontend processing
-    @date_fields = [l(:field_start_date), l(:field_due_date)]
+    fetch_pivot_data(scope)
     
-    # Get custom fields available for the project's trackers
-    project_trackers = @project.trackers
-    available_custom_fields = project_trackers.map(&:custom_fields).flatten.uniq
-    
-    # Add date-type custom fields that are available for the project
-    @date_fields += available_custom_fields.select { |cf| cf.field_format == 'date' }.map(&:name)
-
-    # Identify numeric fields for aggregators (Sum, Average, etc.)
-    @numeric_fields = [l(:field_estimated_hours), l(:field_done_ratio)]
-    @numeric_fields += available_custom_fields.select { |cf| %w(int float).include?(cf.field_format) }.map(&:name)
-
-    # Identify boolean fields for multi-column aggregation
-    @boolean_fields = available_custom_fields.select { |cf| cf.field_format == 'bool' }.map(&:name)
-    
-    # Pass pivot config to view if available
     @pivot_config = @query.try(:pivot_config)
   end
 
+  # Save pivot table query configuration
+  # Creates a new IssueQuery with the provided pivot_config
+  # @return [void]
   def save
-    @query = IssueQuery.new(:name => "_")
-    @query.project = @project
-    @query.user = User.current
+    query_name = params[:query_name].to_s.strip
     
-    # Safe attributes assignment if we had a proper form, but here manual for custom logic
-    @query.name = params[:query_name]
-    @query.pivot_config = params[:pivot_config]
-    @query.visibility = IssueQuery::VISIBILITY_PRIVATE
-    
-    if @query.save
+    if query_name.blank?
+      flash[:error] = l(:error_query_name_blank)
+      return redirect_to_index
+    end
+
+    pivot_config = params[:pivot_config].to_s
+    if pivot_config.bytesize > MAX_PIVOT_CONFIG_SIZE
+      flash[:error] = l(:error_pivot_config_too_large)
+      return redirect_to_index
+    end
+
+    service = PivotQueryService.new(@project, User.current)
+    @query = service.create_query(query_name, pivot_config)
+
+    if @query.persisted?
       flash[:notice] = l(:notice_successful_create)
-      redirect_to :controller => 'pivot', :action => 'index', :project_id => @project, :query_id => @query.id
+      redirect_to controller: 'pivot', action: 'index', project_id: @project, query_id: @query.id
     else
       flash[:error] = @query.errors.full_messages.join(", ")
-      redirect_to :controller => 'pivot', :action => 'index', :project_id => @project
+      redirect_to_index
     end
   end
 
   private
 
+  # Find and validate project from params
+  # @return [Project] the project object
+  # @raise [void] renders 404 if project not found
   def find_project
     @project = Project.find(params[:project_id])
   rescue ActiveRecord::RecordNotFound
     render_404
   end
+
+  # Redirect to pivot index page for current project
+  def redirect_to_index
+    redirect_to controller: 'pivot', action: 'index', project_id: @project
+  end
+
+  # Fetch pivot data from PivotTableBuilder and assign to instance variables
+  # Handles errors gracefully by logging and assigning empty defaults
+  # @param scope [ActiveRecord::Relation] the scope of issues to process
+  # @return [void]
+  def fetch_pivot_data(scope)
+    builder = PivotTableBuilder.new(@project, @query, scope).run
+    @issues_json = builder.issues_json
+    @date_fields = builder.date_fields
+    @numeric_fields = builder.numeric_fields
+    @boolean_fields = builder.boolean_fields
+  rescue => e
+    logger.error("PivotTableBuilder error: #{e.message}\n#{e.backtrace.join("\n")}")
+    flash.now[:error] = l(:error_pivot_data_loading)
+    @issues_json = []
+    @date_fields = []
+    @numeric_fields = []
+    @boolean_fields = []
+  end
+
+  # Build an ActiveRecord scope for issues with appropriate filtering
+  # Applies query statement if valid, returns base scope on error
+  # Limits to MAX_ISSUES to prevent memory issues with large projects
+  # @return [ActiveRecord::Relation] the issue scope
+  def build_issue_scope
+    base_scope = @project.issues.visible
+      .includes(:status, :tracker, :priority, :assigned_to, :category, :fixed_version, :author)
+
+    filtered_scope = if @query.valid?
+      begin
+        base_scope.where(@query.statement)
+      rescue => e
+        logger.warn("Query filter failed: #{e.message}")
+        base_scope
+      end
+    else
+      base_scope
+    end
+
+    total_count = filtered_scope.count
+    if total_count > MAX_ISSUES
+      flash.now[:warning] = l(:warning_too_many_issues, count: MAX_ISSUES)
+      filtered_scope = filtered_scope.limit(MAX_ISSUES)
+    end
+
+    filtered_scope
+  end
 end
+

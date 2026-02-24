@@ -22,6 +22,9 @@ en:
   label_regex_example: "(e.g., ^(\\d+) )"
   label_format_example: "(e.g., {0}* )"
   placeholder_group_name: "e.g., Subject Group"
+  error_pivot_data_loading: "Failed to load pivot data. Please try again."
+  error_query_name_blank: "Query name cannot be blank."
+  error_pivot_config_too_large: "The configuration data is too large to save. Please simplify your settings."
   # JS Strings
   js:
     render_error: "An error occurred while rendering the pivot table."
@@ -72,3 +75,15 @@ en:
     aggregator_count_as_fraction_of_total: "Count as Fraction of Total"
     aggregator_count_as_fraction_of_rows: "Count as Fraction of Rows"
     aggregator_count_as_fraction_of_columns: "Count as Fraction of Columns"
+    renderers:
+      table: "Table"
+      table_barchart: "Table Barchart"
+      heatmap: "Heatmap"
+      row_heatmap: "Row Heatmap"
+      col_heatmap: "Col Heatmap"
+      line_chart: "Line Chart"
+      bar_chart: "Bar Chart"
+      stacked_bar_chart: "Stacked Bar Chart"
+      area_chart: "Area Chart"
+      scatter_chart: "Scatter Chart"
+      tsv_export: "TSV Export"
