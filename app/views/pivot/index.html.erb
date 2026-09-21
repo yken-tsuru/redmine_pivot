@@ -87,11 +87,11 @@
 <div id="pivot-table-output"></div>
 
 <div id="pivot-config-data" class="u-hidden"
-  data-issues="<%= j @issues_json.to_json %>"
-  data-options="<%= j pivot_default_options.to_json %>"
-  data-locale-strings="<%= j pivot_locale_data.to_json %>"
-  data-date-fields="<%= j @date_fields.to_json %>"
-  data-numeric-fields="<%= j @numeric_fields.to_json %>"
-  data-boolean-fields="<%= j @boolean_fields.to_json %>"
-  data-saved-config="<%= j(@pivot_config.to_json) %>"
+  data-issues="<%= h(@issues_json.to_json) %>"
+  data-options="<%= h(pivot_default_options.to_json) %>"
+  data-locale-strings="<%= h(pivot_locale_data.to_json) %>"
+  data-date-fields="<%= h(@date_fields.to_json) %>"
+  data-numeric-fields="<%= h(@numeric_fields.to_json) %>"
+  data-boolean-fields="<%= h(@boolean_fields.to_json) %>"
+  data-saved-config="<%= h(@pivot_config.to_json) %>"
 ></div>
